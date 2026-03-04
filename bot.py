@@ -1,14 +1,18 @@
 import requests
 from flask import Flask, request
 from datetime import datetime
+from apscheduler.schedulers.background import BackgroundScheduler
 
-# 🔹 ВСТАВЬТЕ СЮДА СВОЙ ТОКЕН
 TOKEN = "8554074737:AAGTnrbU6kfm0rxGxxs1rTq5waaZIlN3lbE"
-
-# 🔹 ВАШ TELEGRAM ID
 YOUR_CHAT_ID = 1008219132
 
 app = Flask(__name__)
+
+# Счётчики за день
+stats = {
+    "joined": 0,
+    "left": 0
+}
 
 @app.route("/", methods=["POST"])
 def webhook():
@@ -16,47 +20,45 @@ def webhook():
 
     if "message" in data:
 
-        # 📥 НОВЫЙ УЧАСТНИК
+        # Вход
         if "new_chat_members" in data["message"]:
             for user in data["message"]["new_chat_members"]:
+                stats["joined"] += 1
 
-                name = user.get("first_name", "Без имени")
-                username = user.get("username")
-                user_id = user.get("id")
-                time_now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-
-                text = f"📥 Новый участник!\n\n"
-                text += f"👤 Имя: {name}\n"
-                text += f"🔗 Username: @{username if username else 'нет username'}\n"
-                text += f"🆔 ID: {user_id}\n"
-                text += f"⏰ Время: {time_now}"
-
-                url = f"https://api.telegram.org/bot{TOKEN}/sendMessage"
-                requests.post(url, data={
-                    "chat_id": YOUR_CHAT_ID,
-                    "text": text
-                })
-
-        # 📤 УДАЛЕНИЕ / ВЫХОД УЧАСТНИКА
+        # Выход
         if "left_chat_member" in data["message"]:
-
-            user = data["message"]["left_chat_member"]
-            name = user.get("first_name", "Без имени")
-            user_id = user.get("id")
-            time_now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-
-            text = f"📤 Участник вышел!\n\n"
-            text += f"👤 Имя: {name}\n"
-            text += f"🆔 ID: {user_id}\n"
-            text += f"⏰ Время: {time_now}"
-
-            url = f"https://api.telegram.org/bot{TOKEN}/sendMessage"
-            requests.post(url, data={
-                "chat_id": YOUR_CHAT_ID,
-                "text": text
-            })
+            stats["left"] += 1
 
     return "OK"
+
+
+def send_daily_report():
+    joined = stats["joined"]
+    left = stats["left"]
+    net = joined - left
+
+    text = f"""📊 Статистика за день
+
+➕ Вошло: {joined}
+➖ Вышло: {left}
+📈 Чистый прирост: {net}
+"""
+
+    url = f"https://api.telegram.org/bot{TOKEN}/sendMessage"
+    requests.post(url, data={
+        "chat_id": YOUR_CHAT_ID,
+        "text": text
+    })
+
+    # Сброс счётчиков
+    stats["joined"] = 0
+    stats["left"] = 0
+
+
+# Планировщик
+scheduler = BackgroundScheduler()
+scheduler.add_job(send_daily_report, 'cron', hour=23, minute=0)
+scheduler.start()
 
 
 @app.route("/")
