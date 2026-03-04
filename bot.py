@@ -1,5 +1,6 @@
 import requests
 from flask import Flask, request
+from datetime import datetime
 
 TOKEN = "8554074737:AAGTnrbU6kfm0rxGxxs1rTq5waaZIlN3lbE"
 YOUR_CHAT_ID = 1008219132
@@ -11,11 +12,24 @@ def webhook():
     data = request.get_json()
 
     if "message" in data:
+
+        # Новый участник
         if "new_chat_members" in data["message"]:
             for user in data["message"]["new_chat_members"]:
-                name = user.get("first_name", "Новый участник")
 
-                text = f"Новый участник в группе: {name}"
+                name = user.get("first_name", "Без имени")
+                username = user.get("username", "нет username")
+                user_id = user.get("id")
+                time_now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+                text = f"""
+📥 Новый участник!
+
+👤 Имя: {name}
+🔗 Username: @{username}
+🆔 ID: {user_id}
+⏰ Время: {time_now}
+"""
 
                 url = f"https://api.telegram.org/bot{TOKEN}/sendMessage"
                 requests.post(url, data={
