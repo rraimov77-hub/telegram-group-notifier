@@ -14,7 +14,7 @@ TOKEN = "8554074737:AAGTnrbU6kfm0rxGxxs1rTq5waaZIlN3lbE"
 # ======================
 YOUR_CHAT_ID = 1008219132
 # ======================
-# ФАЙЛЫ
+# ФАЙЛ ДЛЯ ГРУПП
 # ======================
 GROUPS_FILE = "groups.txt"
 
@@ -40,6 +40,28 @@ def save_group(chat_id, title):
 
 
 # ======================
+# ОБНОВЛЕНИЕ СТАТИСТИКИ
+# ======================
+def update_stats(chat_id, joined=0, left=0):
+    file_name = f"stats_{chat_id}.txt"
+
+    try:
+        with open(file_name, "r") as f:
+            data = f.read().split(",")
+            current_joined = int(data[0])
+            current_left = int(data[1])
+    except:
+        current_joined = 0
+        current_left = 0
+
+    current_joined += joined
+    current_left += left
+
+    with open(file_name, "w") as f:
+        f.write(f"{current_joined},{current_left}")
+
+
+# ======================
 # WEBHOOK
 # ======================
 @app.route("/", methods=["POST"])
@@ -49,9 +71,6 @@ def webhook():
     if not data:
         return "OK"
 
-    # ======================
-    # ОБРАБОТКА СООБЩЕНИЙ
-    # ======================
     if "message" in data:
 
         message = data["message"]
@@ -64,9 +83,7 @@ def webhook():
         if chat["type"] in ["group", "supergroup"]:
             save_group(chat_id, chat_title)
 
-        # ======================
-        # АДМИН ПАНЕЛЬ
-        # ======================
+        # Админ-панель
         if message.get("text") == "/admin" and user_id == YOUR_CHAT_ID:
 
             try:
@@ -94,22 +111,16 @@ def webhook():
                 }
             )
 
-        # ======================
-        # ВХОД УЧАСТНИКА
-        # ======================
+        # Новый участник
         if "new_chat_members" in message:
             for _ in message["new_chat_members"]:
                 update_stats(chat_id, joined=1)
 
-        # ======================
-        # ВЫХОД УЧАСТНИКА
-        # ======================
+        # Участник вышел
         if "left_chat_member" in message:
             update_stats(chat_id, left=1)
 
-    # ======================
-    # ОБРАБОТКА КНОПОК
-    # ======================
+    # Обработка кнопок
     if "callback_query" in data:
 
         callback_data = data["callback_query"]["data"]
@@ -129,15 +140,28 @@ def webhook():
                 left = 0
 
             net = joined - left
-            net_text = f"+{net}" if net > 0 else str(net)
 
-            text = f"""📊 ОТЧЁТ ПО ГРУППЕ
+            if net > 0:
+                net_text = f"📈 +{net}"
+            elif net < 0:
+                net_text = f"📉 {net}"
+            else:
+                net_text = "➖ 0"
 
-🏷 ID группы: {chat_id}
+            text = f"""
+━━━━━━━━━━━━━━
+📊 СТАТИСТИКА ГРУППЫ
+━━━━━━━━━━━━━━
 
-➕ Пришло: {joined}
-➖ Ушло: {left}
-📈 Чистый прирост: {net_text}
+🆔 ID: {chat_id}
+
+➕ Новых участников: {joined}
+➖ Ушли: {left}
+
+{net_text}
+
+━━━━━━━━━━━━━━
+📅 Отчёт сформирован автоматически
 """
 
             requests.post(
@@ -149,28 +173,6 @@ def webhook():
             )
 
     return "OK"
-
-
-# ======================
-# СТАТИСТИКА
-# ======================
-def update_stats(chat_id, joined=0, left=0):
-    file_name = f"stats_{chat_id}.txt"
-
-    try:
-        with open(file_name, "r") as f:
-            data = f.read().split(",")
-            current_joined = int(data[0])
-            current_left = int(data[1])
-    except:
-        current_joined = 0
-        current_left = 0
-
-    current_joined += joined
-    current_left += left
-
-    with open(file_name, "w") as f:
-        f.write(f"{current_joined},{current_left}")
 
 
 # ======================
