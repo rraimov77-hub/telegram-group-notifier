@@ -34,9 +34,9 @@ def webhook():
     data = request.get_json()
 
     if "message" in data:
-
-    # 📊 Команда статистики
-if "text" in data["message"] and data["message"]["text"].lower() == "статистика":
+       
+        # 📊 Команда статистики
+        if "text" in data["message"] and data["message"]["text"].lower() == "статистика":
 
     try:
         with open("stats.txt", "r") as f:
