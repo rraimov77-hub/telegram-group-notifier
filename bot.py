@@ -55,7 +55,7 @@ def webhook():
                     "chat_id": YOUR_CHAT_ID,
                     "text": text
                 })
-                update_stats(left=1)
+                update_stats(joined=1)      
         # 📤 Участник вышел
         if "left_chat_member" in data["message"]:
 
@@ -76,7 +76,7 @@ def webhook():
                 "chat_id": YOUR_CHAT_ID,
                 "text": text
             })
-
+            update_stats(left=1)
     return "OK"
 
 
