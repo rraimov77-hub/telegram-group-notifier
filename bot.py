@@ -85,6 +85,46 @@ def webhook():
 def home():
     return "Bot is running"
 
+def daily_report_scheduler():
+    while True:
+        now = datetime.now()
 
+        # Если время 23:00
+        if now.hour == 23 and now.minute == 0:
+            try:
+                with open("stats.txt", "r") as f:
+                    data = f.read().split(",")
+                    joined = int(data[0])
+                    left = int(data[1])
+            except:
+                joined = 0
+                left = 0
+
+            net = joined - left
+
+            text = f"""📊 Статистика за день
+
+➕ Пришло: {joined}
+➖ Ушло: {left}
+📈 Прирост: {net}
+"""
+
+            url = f"https://api.telegram.org/bot{TOKEN}/sendMessage"
+            requests.post(url, data={
+                "chat_id": YOUR_CHAT_ID,
+                "text": text
+            })
+
+            # Сброс
+            with open("stats.txt", "w") as f:
+                f.write("0,0")
+
+            time.sleep(60)
+
+        time.sleep(30)
 if __name__ == "__main__":
+    thread = threading.Thread(target=daily_report_scheduler)
+    thread.daemon = True
+    thread.start()
+
     app.run(host="0.0.0.0", port=10000)
