@@ -3,6 +3,7 @@ from flask import Flask, request
 from datetime import datetime
 import threading
 import time
+import pytz
 # 🔹 ВСТАВЬТЕ СЮДА СВОЙ ТОКЕН
 TOKEN = "8554074737:AAGTnrbU6kfm0rxGxxs1rTq5waaZIlN3lbE"
 
@@ -33,8 +34,9 @@ def webhook():
     data = request.get_json()
 
     if "message" in data:
-        # 📊 Команда статистики
-if data["message"].get("text") == "статистика":
+
+    # 📊 Команда статистики
+if "text" in data["message"] and data["message"]["text"].lower() == "статистика":
 
     try:
         with open("stats.txt", "r") as f:
@@ -47,7 +49,7 @@ if data["message"].get("text") == "статистика":
 
     net = joined - left
 
-    text = f"""📊 Статистика за день
+    text = f"""📊 Статистика
 
 ➕ Пришло: {joined}
 ➖ Ушло: {left}
@@ -66,8 +68,8 @@ if data["message"].get("text") == "статистика":
                 name = user.get("first_name", "Без имени")
                 username = user.get("username")
                 user_id = user.get("id")
-                time_now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-
+                tz = pytz.timezone("Asia/Tashkent")
+                time_now = datetime.now(tz).strftime("%Y-%m-%d %H:%M:%S")
                 text = (
                     "📥 Новый участник!\n\n"
                     f"👤 Имя: {name}\n"
@@ -88,7 +90,8 @@ if data["message"].get("text") == "статистика":
             user = data["message"]["left_chat_member"]
             name = user.get("first_name", "Без имени")
             user_id = user.get("id")
-            time_now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            tz = pytz.timezone("Asia/Tashkent")
+            time_now = datetime.now(tz).strftime("%Y-%m-%d %H:%M:%S")
 
             text = (
                 "📤 Участник вышел!\n\n"
