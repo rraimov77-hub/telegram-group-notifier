@@ -7,7 +7,24 @@ TOKEN = "8554074737:AAGTnrbU6kfm0rxGxxs1rTq5waaZIlN3lbE"
 
 # 🔹 ВАШ TELEGRAM ID
 YOUR_CHAT_ID = 1008219132
+# Файл для хранения статистики
+STATS_FILE = "stats.txt"
 
+def update_stats(joined=0, left=0):
+    try:
+        with open(STATS_FILE, "r") as f:
+            data = f.read().split(",")
+            current_joined = int(data[0])
+            current_left = int(data[1])
+    except:
+        current_joined = 0
+        current_left = 0
+
+    current_joined += joined
+    current_left += left
+
+    with open(STATS_FILE, "w") as f:
+        f.write(f"{current_joined},{current_left}")
 app = Flask(__name__)
 
 @app.route("/", methods=["POST"])
