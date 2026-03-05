@@ -3,7 +3,20 @@ import requests
 from flask import Flask, request
 from datetime import datetime
 import pytz
+GROUPS_FILE = "groups.txt"
+def save_group(chat_id, title):
+    try:
+        with open(GROUPS_FILE, "r") as f:
+            groups = f.read().splitlines()
+    except:
+        groups = []
 
+    entry = f"{chat_id}|{title}"
+
+    if entry not in groups:
+        groups.append(entry)
+        with open(GROUPS_FILE, "w") as f:
+            f.write("\n".join(groups))
 # =========================
 # 🔹 ВСТАВЬТЕ СЮДА ТОКЕН
 # =========================
