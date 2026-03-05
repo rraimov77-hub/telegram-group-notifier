@@ -33,34 +33,34 @@ app = Flask(__name__)
 def webhook():
     data = request.get_json()
 
-    if "message" in data:
-       
+    if "message" in data
+    
         # 📊 Команда статистики
         if "text" in data["message"] and data["message"]["text"].lower() == "статистика":
 
-    try:
-        with open("stats.txt", "r") as f:
-            data_stats = f.read().split(",")
-            joined = int(data_stats[0])
-            left = int(data_stats[1])
-    except:
-        joined = 0
-        left = 0
+            try:
+                with open("stats.txt", "r") as f:
+                    data_stats = f.read().split(",")
+                    joined = int(data_stats[0])
+                    left = int(data_stats[1])
+            except:
+                joined = 0
+                left = 0
 
-    net = joined - left
+            net = joined - left
 
-    text = f"""📊 Статистика
+            text = f"""📊 Статистика
 
 ➕ Пришло: {joined}
 ➖ Ушло: {left}
 📈 Прирост: {net}
 """
 
-    url = f"https://api.telegram.org/bot{TOKEN}/sendMessage"
-    requests.post(url, data={
-        "chat_id": YOUR_CHAT_ID,
-        "text": text
-    })
+        url = f"https://api.telegram.org/bot{TOKEN}/sendMessage"
+        requests.post(url, data={
+            "chat_id": YOUR_CHAT_ID,
+            "text": text
+        })
         # 📥 Новый участник
         if "new_chat_members" in data["message"]:
             for user in data["message"]["new_chat_members"]:
