@@ -3,7 +3,31 @@ import requests
 from flask import Flask, request
 from datetime import datetime
 import pytz
+
+# =========================
+# 🔐 ВСТАВЬТЕ СВОЙ ТОКЕН
+# =========================
+TOKEN = "ВСТАВЬТЕ_ТОКЕН"
+
+# =========================
+# 🔐 ВАШ TELEGRAM ID
+# =========================
+YOUR_CHAT_ID = 123456789
+
+app = Flask(__name__)
+
 GROUPS_FILE = "groups.txt"
+
+# =========================
+# Время Ташкент
+# =========================
+def now():
+    tz = pytz.timezone("Asia/Tashkent")
+    return datetime.now(tz)
+
+# =========================
+# Сохранение групп
+# =========================
 def save_group(chat_id, title):
     try:
         with open(GROUPS_FILE, "r") as f:
@@ -17,27 +41,9 @@ def save_group(chat_id, title):
         groups.append(entry)
         with open(GROUPS_FILE, "w") as f:
             f.write("\n".join(groups))
-# =========================
-# 🔹 ВСТАВЬТЕ СЮДА ТОКЕН
-# =========================
-TOKEN = "8554074737:AAGTnrbU6kfm0rxGxxs1rTq5waaZIlN3lbE"
 
 # =========================
-# 🔹 ВАШ TELEGRAM ID
-# =========================
-YOUR_CHAT_ID = 1008219132
-
-app = Flask(__name__)
-
-# =========================
-# Время Ташкент
-# =========================
-def now_tashkent():
-    tz = pytz.timezone("Asia/Tashkent")
-    return datetime.now(tz)
-
-# =========================
-# Файлы по группе
+# Файлы статистики
 # =========================
 def daily_file(chat_id):
     return f"daily_{chat_id}.txt"
@@ -65,7 +71,7 @@ def update_stats(file_name, joined=0, left=0):
         f.write(f"{j},{l}")
 
 # =========================
-# Webhook
+# WEBHOOK
 # =========================
 @app.route("/", methods=["POST"])
 def webhook():
@@ -74,9 +80,30 @@ def webhook():
     if not data:
         return "OK"
 
-    # =========================
-    # Сообщения
-    # =========================
+    # =====================
+    # CALLBACK КНОПКИ
+    # =====================
+    if "callback_query" in data:
+        query = data["callback_query"]
+        callback_data = query["data"]
+
+        if callback_data == "day":
+            text = "📊 Дневная статистика обновляется автоматически по группам."
+        elif callback_data == "month":
+            text = "📈 Месячная статистика обновляется автоматически по группам."
+        else:
+            text = "OK"
+
+        requests.post(
+            f"https://api.telegram.org/bot{TOKEN}/sendMessage",
+            data={"chat_id": YOUR_CHAT_ID, "text": text}
+        )
+
+        return "OK"
+
+    # =====================
+    # СООБЩЕНИЯ
+    # =====================
     if "message" in data:
 
         message = data["message"]
@@ -84,56 +111,51 @@ def webhook():
         chat_type = message["chat"]["type"]
         user_id = message["from"]["id"]
 
-        # =========================
-        # АДМИН-ПАНЕЛЬ (ТОЛЬКО ЛИЧКА)
-        # =========================
-        # =========================
-# АДМИН-ПАНЕЛЬ (ТОЛЬКО ЛИЧКА)
-# =========================
-if message.get("text") == "/admin" and user_id == YOUR_CHAT_ID and chat_type == "private":
+        # Сохраняем группу
+        chat_title = message["chat"].get("title", "Личная переписка")
+        save_group(chat_id, chat_title)
 
-    # Читаем список групп
-    try:
-        with open(GROUPS_FILE, "r") as f:
-            groups = f.read().splitlines()
-    except:
-        groups = []
+        # Админ-панель
+        if message.get("text") == "/admin" and user_id == YOUR_CHAT_ID and chat_type == "private":
 
-    groups_text = "📋 Список групп:\n\n"
+            groups_text = "📋 Список групп:\n\n"
 
-    if not groups:
-        groups_text += "Группы пока не найдены."
-    else:
-        for g in groups:
-            chat_id, title = g.split("|")
-            groups_text += f"• {title}\n"
+            try:
+                with open(GROUPS_FILE, "r") as f:
+                    groups = f.read().splitlines()
+            except:
+                groups = []
 
-    keyboard = {
-        "inline_keyboard": [
-            [{"text": "📊 Статистика дня", "callback_data": "day"}],
-            [{"text": "📈 Статистика месяца", "callback_data": "month"}]
-        ]
-    }
+            if not groups:
+                groups_text += "Группы пока не найдены."
+            else:
+                for g in groups:
+                    gid, title = g.split("|")
+                    groups_text += f"• {title}\n"
 
-    requests.post(
-        f"https://api.telegram.org/bot{TOKEN}/sendMessage",
-        json={
-            "chat_id": YOUR_CHAT_ID,
-            "text": "🔐 Админ-панель\n\n" + groups_text,
-            "reply_markup": keyboard
-        }
-    )
+            keyboard = {
+                "inline_keyboard": [
+                    [{"text": "📊 Статистика", "callback_data": "day"}]
+                ]
+            }
 
-    return "OK"
+            requests.post(
+                f"https://api.telegram.org/bot{TOKEN}/sendMessage",
+                json={
+                    "chat_id": YOUR_CHAT_ID,
+                    "text": "🔐 Админ-панель\n\n" + groups_text,
+                    "reply_markup": keyboard
+                }
+            )
 
-        # =========================
+            return "OK"
+
         # Новый участник
-        # =========================
         if "new_chat_members" in message:
             for user in message["new_chat_members"]:
 
                 name = user.get("first_name", "Без имени")
-                time_now = now_tashkent().strftime("%Y-%m-%d %H:%M:%S")
+                time_now = now().strftime("%Y-%m-%d %H:%M:%S")
 
                 text = f"""📥 Новый участник
 
@@ -149,14 +171,12 @@ if message.get("text") == "/admin" and user_id == YOUR_CHAT_ID and chat_type == 
                 update_stats(daily_file(chat_id), joined=1)
                 update_stats(monthly_file(chat_id), joined=1)
 
-        # =========================
         # Участник вышел
-        # =========================
         if "left_chat_member" in message:
 
             user = message["left_chat_member"]
             name = user.get("first_name", "Без имени")
-            time_now = now_tashkent().strftime("%Y-%m-%d %H:%M:%S")
+            time_now = now().strftime("%Y-%m-%d %H:%M:%S")
 
             text = f"""📤 Участник вышел
 
@@ -171,65 +191,6 @@ if message.get("text") == "/admin" and user_id == YOUR_CHAT_ID and chat_type == 
 
             update_stats(daily_file(chat_id), left=1)
             update_stats(monthly_file(chat_id), left=1)
-
-    # =========================
-    # Кнопки (callback)
-    # =========================
-    if "callback_query" in data:
-
-        query = data["callback_query"]
-        callback_data = query["data"]
-        chat_id = int(callback_data.split("_")[1])
-
-        if callback_data.startswith("day_"):
-
-            try:
-                with open(daily_file(chat_id), "r") as f:
-                    stats = f.read().split(",")
-                    joined = int(stats[0])
-                    left = int(stats[1])
-            except:
-                joined = 0
-                left = 0
-
-            net = joined - left
-
-            text = f"""📊 Статистика за день
-
-➕ Пришло: {joined}
-➖ Ушло: {left}
-📈 Прирост: {net}
-"""
-
-            requests.post(
-                f"https://api.telegram.org/bot{TOKEN}/sendMessage",
-                data={"chat_id": YOUR_CHAT_ID, "text": text}
-            )
-
-        if callback_data.startswith("month_"):
-
-            try:
-                with open(monthly_file(chat_id), "r") as f:
-                    stats = f.read().split(",")
-                    joined = int(stats[0])
-                    left = int(stats[1])
-            except:
-                joined = 0
-                left = 0
-
-            net = joined - left
-
-            text = f"""📈 Статистика за месяц
-
-➕ Пришло: {joined}
-➖ Ушло: {left}
-📊 Прирост: {net}
-"""
-
-            requests.post(
-                f"https://api.telegram.org/bot{TOKEN}/sendMessage",
-                data={"chat_id": YOUR_CHAT_ID, "text": text}
-            )
 
     return "OK"
 
