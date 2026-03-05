@@ -151,8 +151,6 @@ def daily_report_scheduler():
 
         time.sleep(30)
 if __name__ == "__main__":
-    thread = threading.Thread(target=daily_report_scheduler)
-    thread.daemon = True
-    thread.start()
-
-    app.run(host="0.0.0.0", port=10000)
+    import os
+    port = int(os.environ.get("PORT", 10000))
+    app.run(host="0.0.0.0", port=port)
