@@ -5,66 +5,75 @@ from datetime import datetime
 import pytz
 
 # =========================
-# 🔹 ВСТАВЬТЕ СВОЙ ТОКЕН
+# 🔹 ВСТАВЬТЕ СЮДА СВОЙ ТОКЕН
 # =========================
 TOKEN = "8554074737:AAGTnrbU6kfm0rxGxxs1rTq5waaZIlN3lbE"
 
 # =========================
-# 🔹 ВАШ TELEGRAM CHAT ID
+# 🔹 ВАШ CHAT ID (куда приходят уведомления)
 # =========================
 YOUR_CHAT_ID = 1008219132
-
-# =========================
-# Файлы хранения
-# =========================
-DAILY_FILE = "daily_stats.txt"
-MONTHLY_FILE = "monthly_stats.txt"
-DATE_FILE = "current_date.txt"
-MONTH_FILE = "current_month.txt"
 
 app = Flask(__name__)
 
 # =========================
-# Получаем текущее время Ташкент
+# Время Ташкент
 # =========================
 def get_now():
     tz = pytz.timezone("Asia/Tashkent")
     return datetime.now(tz)
 
 # =========================
-# Проверка смены дня
+# Файлы по группе
 # =========================
-def check_day_reset():
+def get_daily_file(chat_id):
+    return f"daily_{chat_id}.txt"
+
+def get_monthly_file(chat_id):
+    return f"monthly_{chat_id}.txt"
+
+def get_date_file(chat_id):
+    return f"date_{chat_id}.txt"
+
+def get_month_file(chat_id):
+    return f"month_{chat_id}.txt"
+
+# =========================
+# Авто-сброс дня
+# =========================
+def check_day_reset(chat_id):
     today = get_now().strftime("%Y-%m-%d")
+    file_name = get_date_file(chat_id)
 
     try:
-        with open(DATE_FILE, "r") as f:
-            saved_date = f.read().strip()
+        with open(file_name, "r") as f:
+            saved = f.read().strip()
     except:
-        saved_date = ""
+        saved = ""
 
-    if saved_date != today:
-        with open(DAILY_FILE, "w") as f:
+    if saved != today:
+        with open(get_daily_file(chat_id), "w") as f:
             f.write("0,0")
-        with open(DATE_FILE, "w") as f:
+        with open(file_name, "w") as f:
             f.write(today)
 
 # =========================
-# Проверка смены месяца
+# Авто-сброс месяца
 # =========================
-def check_month_reset():
+def check_month_reset(chat_id):
     current_month = get_now().strftime("%Y-%m")
+    file_name = get_month_file(chat_id)
 
     try:
-        with open(MONTH_FILE, "r") as f:
-            saved_month = f.read().strip()
+        with open(file_name, "r") as f:
+            saved = f.read().strip()
     except:
-        saved_month = ""
+        saved = ""
 
-    if saved_month != current_month:
-        with open(MONTHLY_FILE, "w") as f:
+    if saved != current_month:
+        with open(get_monthly_file(chat_id), "w") as f:
             f.write("0,0")
-        with open(MONTH_FILE, "w") as f:
+        with open(file_name, "w") as f:
             f.write(current_month)
 
 # =========================
@@ -96,18 +105,19 @@ def webhook():
     if not data:
         return "OK"
 
-    check_day_reset()
-    check_month_reset()
-
     if "message" in data:
 
         message = data["message"]
+        chat_id = message["chat"]["id"]
+
+        check_day_reset(chat_id)
+        check_month_reset(chat_id)
 
         # 📊 Статистика дня
         if "text" in message and message["text"].lower() == "день":
 
             try:
-                with open(DAILY_FILE, "r") as f:
+                with open(get_daily_file(chat_id), "r") as f:
                     stats = f.read().split(",")
                     joined = int(stats[0])
                     left = int(stats[1])
@@ -117,7 +127,7 @@ def webhook():
 
             net = joined - left
 
-            text = f"""📊 Статистика за сегодня
+            text = f"""📊 Статистика за день
 
 ➕ Пришло: {joined}
 ➖ Ушло: {left}
@@ -133,7 +143,7 @@ def webhook():
         if "text" in message and message["text"].lower() == "месяц":
 
             try:
-                with open(MONTHLY_FILE, "r") as f:
+                with open(get_monthly_file(chat_id), "r") as f:
                     stats = f.read().split(",")
                     joined = int(stats[0])
                     left = int(stats[1])
@@ -175,8 +185,8 @@ def webhook():
                     data={"chat_id": YOUR_CHAT_ID, "text": text}
                 )
 
-                update_stats(DAILY_FILE, joined=1)
-                update_stats(MONTHLY_FILE, joined=1)
+                update_stats(get_daily_file(chat_id), joined=1)
+                update_stats(get_monthly_file(chat_id), joined=1)
 
         # 📤 Участник вышел
         if "left_chat_member" in message:
@@ -198,14 +208,16 @@ def webhook():
                 data={"chat_id": YOUR_CHAT_ID, "text": text}
             )
 
-            update_stats(DAILY_FILE, left=1)
-            update_stats(MONTHLY_FILE, left=1)
+            update_stats(get_daily_file(chat_id), left=1)
+            update_stats(get_monthly_file(chat_id), left=1)
 
     return "OK"
+
 
 @app.route("/")
 def home():
     return "Bot is running"
+
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 10000))
