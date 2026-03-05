@@ -87,25 +87,44 @@ def webhook():
         # =========================
         # АДМИН-ПАНЕЛЬ (ТОЛЬКО ЛИЧКА)
         # =========================
-        if message.get("text") == "/admin" and user_id == YOUR_CHAT_ID and chat_type == "private":
+        # =========================
+# АДМИН-ПАНЕЛЬ (ТОЛЬКО ЛИЧКА)
+# =========================
+if message.get("text") == "/admin" and user_id == YOUR_CHAT_ID and chat_type == "private":
 
-            keyboard = {
-                "inline_keyboard": [
-                    [{"text": "📊 Статистика дня", "callback_data": f"day_{chat_id}"}],
-                    [{"text": "📈 Статистика месяца", "callback_data": f"month_{chat_id}"}]
-                ]
-            }
+    # Читаем список групп
+    try:
+        with open(GROUPS_FILE, "r") as f:
+            groups = f.read().splitlines()
+    except:
+        groups = []
 
-            requests.post(
-                f"https://api.telegram.org/bot{TOKEN}/sendMessage",
-                json={
-                    "chat_id": YOUR_CHAT_ID,
-                    "text": "🔐 Админ-панель:",
-                    "reply_markup": keyboard
-                }
-            )
+    groups_text = "📋 Список групп:\n\n"
 
-            return "OK"
+    if not groups:
+        groups_text += "Группы пока не найдены."
+    else:
+        for g in groups:
+            chat_id, title = g.split("|")
+            groups_text += f"• {title}\n"
+
+    keyboard = {
+        "inline_keyboard": [
+            [{"text": "📊 Статистика дня", "callback_data": "day"}],
+            [{"text": "📈 Статистика месяца", "callback_data": "month"}]
+        ]
+    }
+
+    requests.post(
+        f"https://api.telegram.org/bot{TOKEN}/sendMessage",
+        json={
+            "chat_id": YOUR_CHAT_ID,
+            "text": "🔐 Админ-панель\n\n" + groups_text,
+            "reply_markup": keyboard
+        }
+    )
+
+    return "OK"
 
         # =========================
         # Новый участник
